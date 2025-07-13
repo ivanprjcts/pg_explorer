@@ -1,6 +1,6 @@
 
 services:
-  db:
+  postgres:
     image: postgres:16
     environment:
       POSTGRES_DB: db
@@ -10,6 +10,13 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+  postgres-explorer:
+    image: postgres-explorer:dev
+    build:
+      context: .
+    depends_on:
+      - postgres
+
 
 volumes:
   postgres_data:

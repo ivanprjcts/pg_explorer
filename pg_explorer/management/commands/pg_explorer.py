@@ -1,0 +1,47 @@
+from django.core.management.base import BaseCommand
+
+from pg_explorer.models import PgClass
+from pg_explorer.pg_utils import analyze_table, get_raw_page
+from pg_explorer.pg_pages import HeapPage
+
+
+class Command(BaseCommand):
+    help = "Test"
+
+    def add_arguments(self, parser):
+        parser.add_argument('table_name', type=str, help='Table name')
+        parser.add_argument('--page-number', type=int, default=0, help='Page number')
+
+    def summary(self, table_name: str):
+        analyze_table(table_name=table_name)
+        pg_class = PgClass.objects.get(name=table_name)
+        self.stdout.write(
+            f'{pg_class.name}, pages={pg_class.pages}, all_visible={pg_class.rel_all_visible}, tuples={pg_class.tuples}'
+        )
+
+    def inspect(self, table_name: str, page_number: int):
+        raw_page = get_raw_page(table_name=table_name, block_number=page_number)
+        page = HeapPage.from_bytes(raw_page)
+        header = page.header
+        self.stdout.write(
+            f'lsn={header.lsn_low:X}/{header.lsn_high:X}, checksum={header.checksum}, flags={header.flags}, '
+            f'lower={header.lower}, upper={header.upper}, special={header.special}, page_size={header.page_size}, '
+            f'version={header.version}, prune_xid={header.prune_xid}'
+        )
+        for line in page.line_pointers:
+            self.stdout.write(
+                f'offset={line.offset}, length={line.length}, flags={line.flags}'
+            )
+        for pg_tuple in page.tuples:
+            self.stdout.write(
+                f'xmin={pg_tuple.header.xmin}, xmax={pg_tuple.header.xmax}, xcid={pg_tuple.header.xcid}, '
+                f'ctid=({pg_tuple.header.ctid_block},{pg_tuple.header.ctid_offset}), '
+                f'infomask2={pg_tuple.header.infomask2}, infomask={pg_tuple.header.infomask}, '
+                f'hoff={pg_tuple.header.hoff}, data={pg_tuple.data}'
+            )
+
+    def handle(self, *args, **options):
+        table_name = options['table_name']
+        page_number = options['page_number']
+        self.summary(table_name)
+        self.inspect(table_name, page_number)

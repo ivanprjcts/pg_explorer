@@ -1,0 +1,20 @@
+name: Unit tests
+
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13
+      - name: Install uv
+        run: pipx install uv
+      - name: Install project dependencies
+        run: |
+          uv sync
+      - name: Display Python version
+        run: uv run pytest tests

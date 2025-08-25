@@ -24,7 +24,8 @@ def test_heap_page_header_fields(page0_bytes):
 def test_heap_page_items_content(page0_bytes):
     page = HeapPage.from_bytes(page0_bytes)
     assert len(page.items) > 0
-    item = page.items[0]
-    assert hasattr(item, "offset")
-    assert hasattr(item, "length")
-    assert item.length > 0
+    # Verify the line-pointer (ItemId) holds the offset/length metadata
+    id0 = page.item_identifiers[0]
+    assert isinstance(id0.offset, int)
+    assert isinstance(id0.length, int)
+    assert id0.length > 0
